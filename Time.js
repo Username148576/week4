@@ -1,6 +1,5 @@
 import firebase from 'firebase';
 
-
 function toDateString(time) {
   const date = new Date(time.seconds * 1000);
   const dateString = `${date.getFullYear().toString()}/${
@@ -9,69 +8,82 @@ function toDateString(time) {
     date.getHours().toString().padStart(2, '0')}:${
     date.getMinutes().toString().padStart(2, '0')}:${
     date.getSeconds().toString().padStart(2, '0')}`;
-
   return dateString;
 }
 
 async function getLastestTime() {
-    const db = firebase.firestore();
-    const timesRef = db.collection('time');
-    const timesArray = [];
-    const querySnapshot = await timesRef.get();
-    querySnapshot.forEach((doc) => {
-        doc.data().id = doc.id;
-        timesArray.push(doc.data().now);
+  const db = firebase.firestore().collection('time');
+  const timeRef = await db.orderBy('time', 'desc').limit(1).get();
+  const output = [];
+  if (timeRef.empty) {
+    output.push({
+      id: 0,
+      time: 'Time queue is empty.',
     });
-    timesArray.sort();
-    console.log(toDateString(timesArray[timesArray.length-1]));
+    console.log('Time queue is empty.');
+  } 
+  else {
+    timeRef.forEach((doc) => {
+      doc.data().id=doc.id;
+      console.log(doc.data().time);
+      output.push({
+        id: doc.id,
+        time :toDateString(doc.data().time),
+      });
+    });
+    console.log(output);
+  }
+  return output;
 }
 
 async function getAllTimes() {
-    const db = firebase.firestore();
-    const timesRef = db.collection('time');
-
-    const timesArray = [];
-    const querySnapshot = await timesRef.get();
-    querySnapshot.forEach((doc) => {
-        doc.data().id = doc.id;
-        timesArray.push(doc.data().now);
+  const db = firebase.firestore().collection('time');
+  const timeRef = await db.orderBy('time', 'desc').get();
+  const output = [];
+  if (timeRef.empty) {
+    output.push({
+      id: 0,
+      time: 'Time queue is empty.',
     });
-    timesArray.sort();
-    for(let i=0;i<timesArray.length;i++)console.log(toDateString(timesArray[i]));
+    console.log('Time queue is empty.');
+  } 
+  else {
+    timeRef.forEach((doc) => {
+      output.push({
+        id: doc.id,
+        time : toDateString(doc.data().time),
+      });
+    });
+    console.log(output);
+  }
+  return output;
 }
 
 function addCurrentTime() {
-    const db = firebase.firestore();
-    const timesRef = db.collection('time');
-    const t = firebase.firestore.Timestamp.fromDate(new Date());
-    const time={
-        now : t
-    }
-    timesRef.add(time);
+  const db = firebase.firestore();
+  const addtimeRef = db.collection('time');
+  const date = new Date();
+  const addtime = { time: date };
+  addtimeRef.add(addtime);
 }
 
 async function deleteEarliestTime() {
-    const db = firebase.firestore();
-    const timesRef = db.collection('time');
-    const querySnapshot = await timesRef.get();
-    let EarliestTime = 9999999999;
-    let timeID;
-    querySnapshot.forEach((doc) => {
-        //console.log(doc.data().now.seconds);
-      if (doc.data().now.seconds < EarliestTime) {
-        timeID = doc.id;
-        EarliestTime = doc.data().now.seconds;
-      }
+  const db = firebase.firestore().collection('time');
+  const timeRef = await db.orderBy('time', 'asc').limit(1).get();
+  const del = [];
+    timeRef.forEach((doc) => {
+      del.push({
+        id: doc.id,
+      });
     });
-    const timeRef = db.collection('time').doc(timeID);
-    //console.log(timeID);
-    timeRef.delete();
-  
-  }
+    //console.log(del.data());
+    const delEarlist = db.doc(del[0].id);
+    delEarlist.delete();
+}
 
 export default {
-    getLastestTime,
-    getAllTimes,
-    addCurrentTime,
-    deleteEarliestTime,
+  getLastestTime,
+  getAllTimes,
+  addCurrentTime,
+  deleteEarliestTime,
 };
